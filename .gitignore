@@ -2,6 +2,7 @@ node_modules
 dist
 dist-electron
 release
+portable-dist
 .DS_Store
 *.local
 npm-debug.log*
