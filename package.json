@@ -1,0 +1,27 @@
+{
+  "name": "azure-speech-studio-workbench",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Azure Speech Studio Voice Gallery Desktop Workbench",
+  "author": "koogg",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc && vite build",
+    "preview": "vite preview",
+    "pack:portable": "npm run build && node pack-portable.js"
+  },
+  "dependencies": {
+    "@element-plus/icons-vue": "^2.3.2",
+    "element-plus": "^2.14.7",
+    "microsoft-cognitiveservices-speech-sdk": "^1.52.0",
+    "pinia": "^3.0.4",
+    "vue": "^3.5.43"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.2.4",
+    "typescript": "^5.9.3",
+    "vite": "^6.4.3",
+    "vue-tsc": "^2.2.12"
+  }
+}
