@@ -476,6 +476,9 @@ export const useTtsStore = defineStore('tts', () => {
       const service = new AzureSpeechService(azureKey.value, azureRegion.value)
       const res = await service.synthesizeSSML(singleSsml)
 
+      if (segment.audioUrl) {
+        URL.revokeObjectURL(segment.audioUrl)
+      }
       segment.audioUrl = res.audioUrl
       segment.audioBlob = res.audioBlob
 

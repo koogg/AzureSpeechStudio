@@ -9,6 +9,7 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+pnpm-workspace.yaml
 
 # 保护用户本地敏感凭据
 data/app_storage.json

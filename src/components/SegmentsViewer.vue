@@ -65,6 +65,7 @@
               placeholder="默认自然"
               clearable
               class="style-select"
+              @change="invalidateSegmentAudio(seg)"
             >
               <el-option label="默认自然" value="" />
               <el-option
@@ -82,6 +83,7 @@
                 v-model="seg.styleDegree"
                 size="small"
                 class="degree-select"
+                @change="invalidateSegmentAudio(seg)"
               >
                 <el-option :value="0.5" label="0.5x (微弱)" />
                 <el-option :value="0.8" label="0.8x (偏弱)" />
@@ -101,11 +103,23 @@
               round
               :type="seg.audioUrl ? 'success' : 'primary'"
               :loading="seg.isSynthesizing"
-              @click="handleListenSingle(seg)"
+              @click="handleListenSingle(seg, false)"
             >
               <el-icon><VideoPlay /></el-icon>
-              <span>{{ seg.audioUrl ? '重播试听' : '单句试听' }}</span>
+              <span>{{ seg.audioUrl ? '播放试听' : '单句试听' }}</span>
             </el-button>
+
+            <!-- 已有音频时提供【重新生成】按钮（明确重新调用云端） -->
+            <el-tooltip v-if="seg.audioUrl" content="重新生成本句音频 (重新请求云端，消耗额度)" placement="top">
+              <el-button
+                size="small"
+                circle
+                :loading="seg.isSynthesizing"
+                @click="handleListenSingle(seg, true)"
+              >
+                <el-icon><RefreshRight /></el-icon>
+              </el-button>
+            </el-tooltip>
 
             <el-button
               size="small"
@@ -128,6 +142,7 @@
           resize="none"
           placeholder="台词内容"
           class="seg-text-input"
+          @input="invalidateSegmentAudio(seg)"
         />
       </div>
     </div>
@@ -233,6 +248,7 @@ const updateCharacterVoice = (charName: string, newVoiceName: string) => {
           s.style = ''
         }
       }
+      invalidateSegmentAudio(s)
       count++
     }
   })
@@ -252,6 +268,14 @@ const getStylesForVoice = (voiceName: string) => {
   return v?.styleList || []
 }
 
+const invalidateSegmentAudio = (seg: ScriptDialogueSegment) => {
+  if (seg.audioUrl) {
+    URL.revokeObjectURL(seg.audioUrl)
+    seg.audioUrl = undefined
+    seg.audioBlob = undefined
+  }
+}
+
 const onVoiceChange = (seg: ScriptDialogueSegment) => {
   const v = ttsStore.voices.find((item) => item.name === seg.voiceName)
   if (v) {
@@ -261,13 +285,28 @@ const onVoiceChange = (seg: ScriptDialogueSegment) => {
       seg.style = ''
     }
   }
+  invalidateSegmentAudio(seg)
 }
 
-const handleListenSingle = async (seg: ScriptDialogueSegment) => {
+const handleListenSingle = async (seg: ScriptDialogueSegment, forceReSynthesize = false) => {
   if (!seg.text.trim()) {
     ElMessage.warning('台词不能为空')
     return
   }
+
+  // 1. 如果已有刚生成的音频且未要求强制重新生成：直接本地播放，不走网络接口，不扣减额度！
+  if (seg.audioUrl && !forceReSynthesize) {
+    ttsStore.loadAudioToPlayer(
+      seg.audioUrl,
+      `【${seg.character}】${seg.text.slice(0, 30)}`,
+      `${seg.voiceDisplayName} · ${getStyleLabel(seg.style || '') || '默认'}`,
+      seg.audioBlob
+    )
+    ElMessage.success(`正在播放已生成的音频（纯本地回放，不扣除额度）`)
+    return
+  }
+
+  // 2. 否则向 Azure 请求生成新音频，并精准扣减单句额度
   try {
     await ttsStore.synthesizeSingleSegment(seg)
     ElMessage.success(`「${seg.character}」试听生成完毕`)
