@@ -65,6 +65,11 @@ pnpm run pack:portable
 - `portable-dist/` 独立免安装文件夹（内嵌轻量 Node.js、静态前端与服务，双击 `一键启动.bat` 运行）；
 - `release/AzureSpeechStudio-Portable-Green.zip`（仅约 33MB 便携压缩包，解压后拷贝至任意电脑双击即用）。
 
+### 4. GitHub 自动构建 Releases
+项目已内置 GitHub Actions 工作流（`.github/workflows/release.yml`）：
+- **自动触发**：推送版本 Tag（例如 `git tag v1.0.0 && git push origin v1.0.0`），云端自动编译并发布至 Releases；
+- **手动触发**：在 GitHub 仓库页面打开 **Actions** -> 选择 **Release Build** -> 点击 **Run workflow** 即可在线一键打包出最新的 Release 资产。
+
 ---
 
 ## 📂 项目结构概览
