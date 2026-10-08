@@ -1,7 +1,7 @@
 {
   "name": "azure-speech-studio-workbench",
   "private": true,
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Azure Speech Studio Voice Gallery Desktop Workbench",
   "author": "koogg",
   "type": "module",
