@@ -122,10 +122,16 @@ const formatTime = (ts: number) => {
   return `${month}/${day} ${hours}:${minutes}`
 }
 
-const playHistoryAudio = (item: HistoryItem) => {
-  if (item.audioUrl) {
-    ttsStore.currentAudioUrl = item.audioUrl
-    ElMessage.success(`已载入「${item.voiceDisplayName}」的历史录音`)
+const playHistoryAudio = async (item: HistoryItem) => {
+  try {
+    const success = await ttsStore.playHistoryItemAudio(item)
+    if (success) {
+      ElMessage.success(`已载入「${item.voiceDisplayName}」的历史录音并播放`)
+    } else {
+      ElMessage.warning('未能加载该录音')
+    }
+  } catch (err: any) {
+    ElMessage.error(err?.message || '播放历史录音失败')
   }
 }
 

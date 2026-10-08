@@ -101,16 +101,16 @@
             <el-button
               size="small"
               round
-              :type="seg.audioUrl ? 'success' : 'primary'"
+              :type="(seg.audioUrl || seg.audioBlob) ? 'success' : 'primary'"
               :loading="seg.isSynthesizing"
               @click="handleListenSingle(seg, false)"
             >
               <el-icon><VideoPlay /></el-icon>
-              <span>{{ seg.audioUrl ? '播放试听' : '单句试听' }}</span>
+              <span>{{ (seg.audioUrl || seg.audioBlob) ? '播放试听' : '单句试听' }}</span>
             </el-button>
 
             <!-- 已有音频时提供【重新生成】按钮（明确重新调用云端） -->
-            <el-tooltip v-if="seg.audioUrl" content="重新生成本句音频 (重新请求云端，消耗额度)" placement="top">
+            <el-tooltip v-if="seg.audioUrl || seg.audioBlob" content="重新生成本句音频 (重新请求云端，消耗额度)" placement="top">
               <el-button
                 size="small"
                 circle
@@ -295,12 +295,19 @@ const handleListenSingle = async (seg: ScriptDialogueSegment, forceReSynthesize 
   }
 
   // 1. 如果已有刚生成的音频且未要求强制重新生成：直接本地播放，不走网络接口，不扣减额度！
-  if (seg.audioUrl && !forceReSynthesize) {
+  if ((seg.audioBlob || seg.audioUrl) && !forceReSynthesize) {
+    let playUrl = seg.audioUrl
+    // 确保 URL 鲜活可用
+    if (seg.audioBlob) {
+      playUrl = URL.createObjectURL(seg.audioBlob)
+      seg.audioUrl = playUrl
+    }
     ttsStore.loadAudioToPlayer(
-      seg.audioUrl,
+      playUrl!,
       `【${seg.character}】${seg.text.slice(0, 30)}`,
       `${seg.voiceDisplayName} · ${getStyleLabel(seg.style || '') || '默认'}`,
-      seg.audioBlob
+      seg.audioBlob,
+      true
     )
     ElMessage.success(`正在播放已生成的音频（纯本地回放，不扣除额度）`)
     return

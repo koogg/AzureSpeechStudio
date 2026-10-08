@@ -92,9 +92,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, computed } from 'vue'
+import { ref, watch, nextTick } from 'vue'
 import { formatDuration } from '../utils/ssml'
 import { ElMessage } from 'element-plus'
+import { useTtsStore } from '../stores/ttsStore'
 
 const props = defineProps<{
   audioUrl?: string
@@ -103,6 +104,7 @@ const props = defineProps<{
   format?: 'mp3' | 'wav'
 }>()
 
+const ttsStore = useTtsStore()
 const audioEl = ref<HTMLAudioElement | null>(null)
 const isPlaying = ref(false)
 const currentTime = ref(0)
@@ -114,6 +116,45 @@ const volumePercent = ref(100)
 const isMuted = ref(false)
 const playbackRate = ref(1.0)
 
+const playAudioNow = () => {
+  if (!audioEl.value || !props.audioUrl) return
+  audioEl.value.currentTime = 0
+  currentTime.value = 0
+  sliderTime.value = 0
+
+  const playPromise = audioEl.value.play()
+  if (playPromise !== undefined) {
+    playPromise
+      .then(() => {
+        isPlaying.value = true
+      })
+      .catch((err) => {
+        console.warn('[AudioPlayer] 自动播放受阻或缓冲中:', err)
+        // 若因数据加载延迟导致，监听 canplay 触发
+        const onCanPlay = () => {
+          audioEl.value?.removeEventListener('canplay', onCanPlay)
+          audioEl.value
+            ?.play()
+            .then(() => {
+              isPlaying.value = true
+            })
+            .catch(() => {})
+        }
+        audioEl.value?.addEventListener('canplay', onCanPlay)
+      })
+  }
+}
+
+// 监听显式播放触发信号 (点击单句试听、重播试听、历史试听)
+watch(
+  () => ttsStore.playAudioTrigger,
+  () => {
+    nextTick(() => {
+      playAudioNow()
+    })
+  }
+)
+
 watch(
   () => props.audioUrl,
   (newUrl) => {
@@ -123,10 +164,6 @@ watch(
       isPlaying.value = false
       if (audioEl.value) {
         audioEl.value.load()
-        // 自动准备播放
-        setTimeout(() => {
-          audioEl.value?.play().catch(() => {})
-        }, 150)
       }
     }
   }
@@ -137,7 +174,14 @@ const togglePlay = () => {
   if (isPlaying.value) {
     audioEl.value.pause()
   } else {
-    audioEl.value.play()
+    audioEl.value
+      .play()
+      .then(() => {
+        isPlaying.value = true
+      })
+      .catch((err) => {
+        console.warn('[AudioPlayer] 播放失败:', err)
+      })
   }
 }
 

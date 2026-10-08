@@ -65,6 +65,7 @@ export const useTtsStore = defineStore('tts', () => {
   const currentAudioTitle = ref<string>('')
   const currentAudioVoiceName = ref<string>('')
   const isAudioPlaying = ref(false)
+  const playAudioTrigger = ref(0)
 
   // 7. 配额看板 (500,000 字符/月)
   const getCurrentMonthKey = () => {
@@ -271,14 +272,14 @@ export const useTtsStore = defineStore('tts', () => {
   /**
    * 加载指定音频到播放器控制台
    */
-  const loadAudioToPlayer = (url: string, title?: string, voiceName?: string, blob?: Blob) => {
-    if (currentAudioUrl.value && currentAudioUrl.value !== url) {
-      URL.revokeObjectURL(currentAudioUrl.value)
-    }
+  const loadAudioToPlayer = (url: string, title?: string, voiceName?: string, blob?: Blob, autoPlay = true) => {
     currentAudioUrl.value = url
     if (blob) currentAudioBlob.value = blob
     if (title) currentAudioTitle.value = title
     if (voiceName) currentAudioVoiceName.value = voiceName
+    if (autoPlay) {
+      playAudioTrigger.value++
+    }
   }
 
   /**
@@ -288,7 +289,8 @@ export const useTtsStore = defineStore('tts', () => {
     // 1. 如果当前内存里已有有效的 blob
     if (item.audioBlob) {
       const url = URL.createObjectURL(item.audioBlob)
-      loadAudioToPlayer(url, item.text.slice(0, 35), item.voiceDisplayName, item.audioBlob)
+      item.audioUrl = url
+      loadAudioToPlayer(url, item.text.slice(0, 35), item.voiceDisplayName, item.audioBlob, true)
       return true
     }
 
@@ -298,7 +300,7 @@ export const useTtsStore = defineStore('tts', () => {
       item.audioBlob = storedBlob
       const url = URL.createObjectURL(storedBlob)
       item.audioUrl = url
-      loadAudioToPlayer(url, item.text.slice(0, 35), item.voiceDisplayName, storedBlob)
+      loadAudioToPlayer(url, item.text.slice(0, 35), item.voiceDisplayName, storedBlob, true)
       return true
     }
 
@@ -315,7 +317,7 @@ export const useTtsStore = defineStore('tts', () => {
       await saveAudioBlobToIndexedDB(item.id, res.audioBlob)
       item.audioBlob = res.audioBlob
       item.audioUrl = res.audioUrl
-      loadAudioToPlayer(res.audioUrl, item.text.slice(0, 35), item.voiceDisplayName, res.audioBlob)
+      loadAudioToPlayer(res.audioUrl, item.text.slice(0, 35), item.voiceDisplayName, res.audioBlob, true)
       return true
     }
 
@@ -476,9 +478,6 @@ export const useTtsStore = defineStore('tts', () => {
       const service = new AzureSpeechService(azureKey.value, azureRegion.value)
       const res = await service.synthesizeSSML(singleSsml)
 
-      if (segment.audioUrl) {
-        URL.revokeObjectURL(segment.audioUrl)
-      }
       segment.audioUrl = res.audioUrl
       segment.audioBlob = res.audioBlob
 
@@ -487,7 +486,8 @@ export const useTtsStore = defineStore('tts', () => {
         res.audioUrl,
         `【${segment.character}】${segment.text.slice(0, 30)}`,
         `${segment.voiceDisplayName} · ${segment.style || '默认'}`,
-        res.audioBlob
+        res.audioBlob,
+        true
       )
 
       // 统计计费
@@ -524,6 +524,7 @@ export const useTtsStore = defineStore('tts', () => {
     currentAudioTitle,
     currentAudioVoiceName,
     isAudioPlaying,
+    playAudioTrigger,
     quotaUsage,
     quotaPercent,
     historyList,
